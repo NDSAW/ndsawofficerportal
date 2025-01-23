@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NDSAW Secure Communication</title>
+    <script src="https://cdn.jsdelivr.net/npm/openpgp/dist/openpgp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #002244;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .container {
+            margin: 20px auto;
+            max-width: 800px;
+            background-color: #f4f4f4;
+            color: black;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        textarea, input {
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #0044cc;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #003399;
+        }
+
+        img {
+            width: 100px;
+            margin-bottom: 20px;
+        }
+
+        h1, h2 {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <img src="logo.png" alt="NDSAW Logo">
+    <h1>NDSAW Secure Communication</h1>
+
+    <div class="container">
+        <h2>Send a Secure Message</h2>
+        <textarea id="plainMessage" rows="5" placeholder="Enter your message here..." required></textarea>
+        <textarea id="recipientPublicKey" rows="8" placeholder="Enter recipient's public key here..." required></textarea>
+        <button onclick="sendMessage()">Encrypt and Send</button>
+    </div>
+
+    <div class="container">
+        <h2>Receive a Secure Message</h2>
+        <textarea id="encryptedMessage" rows="8" placeholder="Paste the encrypted message here..." required></textarea>
+        <textarea id="privateKey" rows="8" placeholder="Paste your private key here..." required></textarea>
+        <input type="password" id="passphrase" placeholder="Enter your private key passphrase (if any)">
+        <button onclick="decryptMessage()">Decrypt Message</button>
+        <h3>Decrypted Message:</h3>
+        <textarea id="decryptedMessage" rows="5" readonly></textarea>
+    </div>
+
+    <audio id="notificationSound" src="notification.mp3" preload="auto"></audio>
+
+    <script>
+        async function sendMessage() {
+            try {
+                const plainMessage = document.getElementById("plainMessage").value;
+                const recipientPublicKeyArmored = document.getElementById("recipientPublicKey").value;
+
+                // Parse recipient's public key
+                const recipientPublicKey = await openpgp.readKey({ armoredKey: recipientPublicKeyArmored });
+
+                // Encrypt the message
+                const encrypted = await openpgp.encrypt({
+                    message: await openpgp.createMessage({ text: plainMessage }),
+                    encryptionKeys: recipientPublicKey,
+                });
+
+                alert("Message encrypted successfully!");
+                console.log("Encrypted Message:", encrypted);
+            } catch (error) {
+                alert("Failed to encrypt the message: " + error.message);
+            }
+        }
+
+        async function decryptMessage() {
+            try {
+                const encryptedMessage = document.getElementById("encryptedMessage").value;
+                const privateKeyArmored = document.getElementById("privateKey").value;
+                const passphrase = document.getElementById("passphrase").value;
+
+                // Parse the private key
+                const privateKey = await openpgp.readKey({ armoredKey: privateKeyArmored });
+
+                // Unlock the private key using the passphrase
+                if (passphrase) {
+                    await privateKey.decrypt(passphrase);
+                }
+
+                // Read the encrypted message
+                const message = await openpgp.readMessage({
+                    armoredMessage: encryptedMessage
+                });
+
+                // Decrypt the message
+                const { data: decrypted } = await openpgp.decrypt({
+                    message: message,
+                    decryptionKeys: privateKey,
+                });
+
+                // Display the decrypted message
+                document.getElementById("decryptedMessage").value = decrypted;
+
+                // Play notification sound
+                const notificationSound = document.getElementById("notificationSound");
+                notificationSound.play();
+            } catch (error) {
+                alert("Failed to decrypt the message: " + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
